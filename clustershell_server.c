@@ -67,32 +67,6 @@ cmdstruc build_struct_from_str(char *cmdstr){
     }
 }
 
-//void exec_local_i(cmdstruc cmd, int connfd){
-//    if(strcmp(cmd.cmd,"cd") == 0){
-//        chdir((cmd.args)[1]);
-//        write(connfd,"null",5);
-//        return;
-//    }
-//    if(fork() == 0){
-//        close(0);
-//        dup2(connfd,0);
-//        close(1);
-//        dup2(connfd,1);
-//        if(cmd.args != NULL){
-//            execvp(cmd.cmd,cmd.args);
-//            perror("execvp");
-//        }
-//        else{
-//            execlp(cmd.cmd,cmd.cmd,NULL);
-//            perror("execlp");
-//        }
-//        exit(0);
-//    }
-//    int status;
-//    wait(&status);
-//    write(connfd,"null",5);
-//}
-
 /*
 Executes the given command on local machine
 and returns the output
@@ -190,30 +164,22 @@ int main(int argc, char *argv[]) {
         printf("Connected to client %s\n",inet_ntoa(cliaddr.sin_addr));
         char buff[MAX_BUFF_SIZE] = {0};
         int ret;
-//        printf("no problems yet!(1)\n");
         while((ret = read(connfd,buff,MAX_BUFF_SIZE)) != 0){
 //            printf("%d\n",ret);
 //            printf("%s\n",buff);
             cmdstruc cmd = build_struct_from_str(buff);
 //            print_struc(cmd);
-//            if(strcmp(cmd.inp,"intrac") != 0){
-                printf("<Executing %s command>\n",cmd.cmd);
-                char *out = exec_local(cmd);
+            printf("<Executing %s command>\n",cmd.cmd);
+            char *out = exec_local(cmd);
 
-                if(out == NULL)
-                    out = "null";
+            if(out == NULL)
+                out = "null";
 //            printf("%s\n",out);
-                write(connfd,out,strlen(out));
-//            }
-//            else{
-//                printf("<Executing %s command interactively>\n",cmd.cmd);
-//                exec_local_i(cmd,connfd);
-//            }
+            write(connfd,out,strlen(out));
+
             memset(buff,0,sizeof(char)*MAX_BUFF_SIZE);
         }
         printf("Closing connection.\n");
-//        close(connfd);
-//        break;
     }
     return 0;
 }
