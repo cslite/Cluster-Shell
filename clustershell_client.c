@@ -1,5 +1,3 @@
-//https://stackoverflow.com/questions/7383803/writing-to-stdin-and-reading-from-stdout-unix-linux-c-programming
-//https://unix.stackexchange.com/questions/505828/how-to-pass-a-string-to-a-command-that-expects-a-file
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -200,37 +198,6 @@ void print_struc(cmdstruc ctest){
 		printf("input = %s\n",ctest.inp);
 }
 
-//void exec_remote_i(int node_id, cmdstruc cmd){
-//    cmd.inp = "intrac";
-//    char *remote_cmd = build_str_from_cmdstruc(cmd);
-//    if(nodes[node_id] != NULL){
-//        write(socket_fd[node_id],remote_cmd,strlen(remote_cmd));
-//        char *buff = (char *)(calloc(MAX_OUTPUT_LEN,sizeof(char)));
-//        int ret;
-//        if((ret=fork()) == 0){
-//            while(1){
-//                fgets(buff,MAX_OUTPUT_LEN,stdin);
-////                scanf("%s",buff);
-//                write(socket_fd[node_id],buff,strlen(buff));
-//            }
-//        }
-//        while(1){
-//            printf("hello!test_msg\n");
-//            memset(buff,0,MAX_OUTPUT_LEN);
-//            if(read(socket_fd[node_id],buff,MAX_OUTPUT_LEN) == 0)
-//                break;
-//            else if(strcmp(buff,"null") == 0)
-//                break;
-//            else{
-//                printf("%s",buff);
-//                fflush(stdout);
-//            }
-//
-//        }
-//        kill(ret,SIGKILL);
-//    }
-//}
-
 char *exec_remote(int node_id, cmdstruc cmd){
 	//get the cmd executed on remote machine(s) and return output
 	char *remote_cmd = build_str_from_cmdstruc(cmd);
@@ -296,74 +263,6 @@ char *exec_local(cmdstruc cmd){
 		return buff;
 }
 
-void unitTest(){
-	/*
-		//Unit Test: numTk
-		printf("%d\n",numTk("Hello#is#tus##",'#'));
-		printf("%d\n",numTk("Hello#is#tus##",'*'));
-	*/
-    /*
-		//Unit Test: build_struct_from_rawstr
-
-		// cmdstruc ctest = build_struct_from_rawstr("./hello pehla dusra2","yeh hai input");
-		// cmdstruc ctest = build_struct_from_rawstr("./hello pehla dusra2",NULL);
-		cmdstruc ctest = build_struct_from_rawstr("cat config.txt",NULL);
-		printf("cmd = %s\n",ctest.cmd);
-		int ci = 0;
-		if(ctest.args != NULL){
-			printf("args = ");
-			while((ctest.args)[ci] != NULL)
-				printf("%s, ",(ctest.args)[ci++]);
-			printf("\n");
-		}
-		if(ctest.inp != NULL)
-			printf("input = %s\n",ctest.inp);
-    */
-	/*
-		//Unit Test: build_str_from_cmdstruc
-
-		cmdstruc ct;
-		ct.cmd = "./hello";
-		char *args[] = {"./hello","pehla",NULL};
-		ct.args = args;
-		// ct.args = NULL;
-		ct.inp = "this is my input";
-		// ct.inp = NULL;
-		printf("%s\n",build_str_from_cmdstruc(ct));
-	*/
-
-		//Unit Test: build_struct_from_str
-    /*
-//		char str[] = "./hello#this is my input#./hello#pehla";
-		char str[] = "cat#null#cat#config.txt";
-		cmdstruc ctest = build_struct_from_str(str);
-		printf("cmd = %s\n",ctest.cmd);
-		int ci = 0;
-		if(ctest.args != NULL){
-			printf("args = ");
-			while((ctest.args)[ci] != NULL)
-				printf("%s, ",(ctest.args)[ci++]);
-			printf("\n");
-		}
-		if(ctest.inp != NULL)
-			printf("input = %s\n",ctest.inp);
-    */
-	/*
-
-		//Unit Test: exec_local
-		cmdstruc ct;
-
-		ct.cmd = "cat";
-		char *args[] = {"cat","config",NULL};
-		ct.args = NULL;
-		ct.inp = NULL;
-
-		char *tout = exec_local(ct);
-		if(tout != NULL)
-			printf("%s\n",tout);
-	*/
-}
-
 void createConnection(int numc){
     struct sockaddr_in serveraddr[numc+1];
     socket_fd = (int *)(calloc(numc+1,sizeof(int)));
@@ -386,8 +285,6 @@ void createConnection(int numc){
 }
 
 int main(int argc, char *argv[]){
-
-	 unitTest();
 
 	if(argc != 2){
 		printf("This shell accepts one argument, the path of the config file.\n");
@@ -462,11 +359,6 @@ int main(int argc, char *argv[]){
 					rawstr = tk + si;
 					cmdstruc cmds = build_struct_from_rawstr(rawstr,tinp);
 //						 print_struc(cmds);
-//                    if(pipecnt == 0){
-//                        exec_remote_i(remote_id,cmds);
-//                        tout = NULL;
-//                    }
-//                    else
                     tout = exec_remote(remote_id,cmds);
 				}
 				else{
@@ -475,9 +367,7 @@ int main(int argc, char *argv[]){
 						// print_struc(cmds);
 					tout = exec_local(cmds);
 				}
-				// printf("tk : %s\n",tk);
 				tk = strtok_r(NULL,"|",&saveptr);
-				// printf("tk2 : %s\n",tk);
 				tinp = tout;
 				tout = NULL;
 			}
