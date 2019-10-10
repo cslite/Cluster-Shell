@@ -23,7 +23,9 @@ typedef struct cmdstruc cmdstruc;
 char **nodes = NULL;
 int *port = NULL;
 int *socket_fd;
-
+void pt(int x){
+    printf("F%d\n",x);
+}
 /*
 read the passed config file and store the mapping to an array
 */
@@ -200,26 +202,82 @@ void print_struc(cmdstruc ctest){
 
 char *exec_remote(int node_id, cmdstruc cmd){
 	//get the cmd executed on remote machine(s) and return output
+//	print_struc(cmd);
 	char *remote_cmd = build_str_from_cmdstruc(cmd);
-//	printf("%s\n\n",remote_cmd);
+//	printf("\nx--%s--x\n",remote_cmd);
 	if(nodes[node_id] != NULL){
 	    //that means that we are connected to this socket
 	    write(socket_fd[node_id],remote_cmd,strlen(remote_cmd));
-	    char *buff = (char *)(calloc(MAX_OUTPUT_LEN,sizeof(char)));
-	    if(read(socket_fd[node_id],buff,MAX_OUTPUT_LEN) == 0)
-	        return NULL;
-	    else if(strcmp(buff,"null")==0)
-	        return NULL;
-	    else
-	        return buff;
+	    if(strcmp(cmd.inp,"stdin") == 0 && strcmp(cmd.cmd,"cd") != 0){
+	        //that means that this process will get input from stdin
+	        int ret;
+
+	        if((ret = fork()) == 0){
+                char *buf = (char *)(calloc(MAX_OUTPUT_LEN,sizeof(char)));
+	            while(1){
+	                fgets(buf,MAX_OUTPUT_LEN,stdin);
+	                write(socket_fd[node_id],buf,strlen(buf)+1);
+	            }
+	        }
+            char *buf = (char *)(calloc(MAX_OUTPUT_LEN,sizeof(char)));
+	        while(1){
+                char tbuf[MAX_OUTPUT_LEN] = {0};
+                if(read(socket_fd[node_id],tbuf,MAX_OUTPUT_LEN) == 0)
+                    break;
+                else{
+                    int si = strlen(tbuf) - 4;
+                    if(si < 0){
+                        strcat(buf,tbuf);
+                    }
+                    else{
+                        char *nulladdr = tbuf + si;
+                        if(strcmp(nulladdr,"null")==0){
+                            nulladdr[0] = '\0';
+                            if(si>0){
+                                strcat(buf,tbuf);
+                            }
+                            break;
+                        }
+                        else{
+                            strcat(buf,tbuf);
+                        }
+                    }
+
+
+                }
+
+	        }
+	        kill(ret,SIGKILL);
+	        if(strlen(buf) == 0)
+	            return NULL;
+	        else
+                return buf;
+	    }
+	    else{
+            char *buff = (char *)(calloc(MAX_OUTPUT_LEN,sizeof(char)));
+            pt(898);
+            if(read(socket_fd[node_id],buff,MAX_OUTPUT_LEN) <= 0)
+                return NULL;
+            else if(strcmp(buff,"null")==0)
+                return NULL;
+            else{
+                printf("buff = %s\n",buff);
+                return buff;
+            }
+
+	    }
+
 	}
 	return NULL;
 }
+
+
 
 /*
 Executes the given command on local machine
 and returns the output
 */
+//char *cmdinptmp;
 char *exec_local(cmdstruc cmd){
 	if(strcmp(cmd.cmd,"cd") == 0){
 		if(chdir((cmd.args)[1]) < 0)
@@ -230,10 +288,43 @@ char *exec_local(cmdstruc cmd){
 	int pw[2];
 	pipe(pr);
 	pipe(pw);
+//	int pi[2];
+//	int po[2];
+//	pipe(pi);
+//	pipe(po);
+//	int cpid;
+//    if(cmd.inp != NULL && strcmp(cmd.inp,"stdin") == 0) {
+//        if ((cpid = fork()) == 0) {
+//            while (1) {
+//                char buf[MAX_LINE_LEN] = {0};
+//                fgets(buf, MAX_LINE_LEN, stdin);
+//                write(po[1], buf, strlen(buf) + 1);
+//                write(pi[1], buf, strlen(buf) + 1);
+//            }
+//        }
+//    }
 	if(fork() == 0){
+
 		// print_struc(cmd);
 		close(pr[1]);
 		close(pw[0]);
+//		if(cmd.inp != NULL && strcmp(cmd.inp,"stdin") == 0){
+//            close(0);
+//            dup2(pi[0],0);
+//            pt(3);
+//            close(1);
+//            dup2(pw[1],1);
+//
+//            if(cmd.args != NULL){
+//                execvp(cmd.cmd,cmd.args);
+//                perror("execvp");
+//            }
+//            else{
+//                execlp(cmd.cmd,cmd.cmd,NULL);
+//                perror("execlp");
+//            }
+//            exit(0);
+//		}
 		if(cmd.inp != NULL){
 			close(0);
 			dup2(pr[0],0);
@@ -252,6 +343,19 @@ char *exec_local(cmdstruc cmd){
 	}
 	close(pr[0]);
 	close(pw[1]);
+//	close(pi[1]);
+//	close(po[1]);
+
+//	if(cmd.inp != NULL && strcmp(cmd.inp,"stdin") == 0){
+//	    int status;
+//	    wait(&status);
+//        pt(4);
+//	    kill(cpid,SIGKILL);
+//        pt(5);
+//        cmdinptmp = (char *)(calloc(MAX_OUTPUT_LEN,sizeof(char)));
+//        if(read(po[0],cmdinptmp,MAX_OUTPUT_LEN) == 0)
+//            cmdinptmp = NULL;
+//	}
 	if(cmd.inp != NULL){
 		write(pr[1],cmd.inp,strlen(cmd.inp));
 		close(pr[1]);
@@ -317,7 +421,7 @@ int main(int argc, char *argv[]){
 			char *saveptr;
 //			int pipecnt = numTk(cmd,'|');
 			char *tk = strtok_r(cmd,"|",&saveptr);
-//			int firstcmd = 1;
+			int firstcmd = 1;
 			while(tk != NULL){
 				if(tk[0] == 'n' && tk[1] == '*'){
 				//execute on all nodes
@@ -328,11 +432,18 @@ int main(int argc, char *argv[]){
 					sscanf(tk,"n*.%n",&si);
 					rawstr = tk + si;
 					cmdstruc cmds = build_struct_from_rawstr(rawstr,tinp);
-						// print_struc(cmds);
+//						 print_struc(cmds);
+//                    if(firstcmd){
+//                        cmds.inp = "stdin";
+//                        firstcmd = 0;
+//                    }
 					int i;
 					char *iout = NULL;
 					tout = (char *)(calloc(MAX_OUTPUT_LEN*numc,sizeof(char)));
 					iout = exec_local(cmds);
+//					if(strcmp(cmds.inp,"stdin") == 0){
+//					    cmds.inp = cmdinptmp;
+//					}
 					if(iout != NULL){
 						nop = 0;
 						strcpy(tout,iout);
@@ -340,8 +451,9 @@ int main(int argc, char *argv[]){
 					else
 						tout[0] = '\0';
 					for(i=1;i<=numc;i++){
-						
+//						print_struc(cmds);
 						iout = exec_remote(i,cmds);
+						printf("iout=%s\n",iout);
 						if(iout != NULL){
 							nop = 0;
 							strcat(tout,"\n");
@@ -359,6 +471,10 @@ int main(int argc, char *argv[]){
 					rawstr = tk + si;
 					cmdstruc cmds = build_struct_from_rawstr(rawstr,tinp);
 //						 print_struc(cmds);
+                    if(firstcmd){
+                        cmds.inp = "stdin";
+                        firstcmd = 0;
+                    }
                     tout = exec_remote(remote_id,cmds);
 				}
 				else{
