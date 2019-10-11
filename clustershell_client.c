@@ -497,6 +497,7 @@ int main(int argc, char *argv[]){
 				}
 				else{
 					//local command
+					firstcmd = 0;
 					cmdstruc cmds = build_struct_from_rawstr(tk,tinp);
 						// print_struc(cmds);
 					tout = exec_local(cmds);
